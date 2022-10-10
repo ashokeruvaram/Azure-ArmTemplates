@@ -1,0 +1,23 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sqlservername": {
+            "value": "armsqlserver"  
+        },
+        "sqldbname": {
+            "value": "armsqldb"  
+        },
+        "sqlusername": {
+            "value": "testuser"   
+        },
+        "sqlpassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/e481263f-5406-4719-a811-3750deb9e539/resourceGroups/ashok-rg/providers/Microsoft.KeyVault/vaults/ashokkey411"
+                },
+                "secretName": "mysecret"
+            }  
+        }
+    }
+}

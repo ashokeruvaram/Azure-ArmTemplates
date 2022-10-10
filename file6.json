@@ -1,0 +1,57 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containercount": {
+            "type": "int",
+            "defaultValue": 3,
+            "metadata": {
+                "description": "The no of containers"
+            }
+        }
+        
+    },
+    "functions": [],
+    "variables": {
+        "StorageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
+        "copy": [
+            {
+                "name": "containername",
+                "count": "[parameters('containercount')]",
+                "input": "[concat(variables('StorageAccountName'),'/default/container',copyIndex('containername',1))]"
+            }
+        ]
+    },
+    "resources": [
+        {
+            "name": "[variables('StorageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "tags": {
+                "displayName": "storageaccount1"
+            },
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            }
+        },
+        {
+            "name": "[variables('containername')[copyIndex('copycontainers')]]",
+            "copy": {
+                "name": "copycontainers",
+                "count": "[length(variables('containername'))]"
+            },
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2021-04-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('StorageAccountName'))]"
+            ],
+            "properties": {
+                "publicAccess": "None"
+            }
+        }
+    ],
+    "outputs": {}
+}

@@ -1,0 +1,89 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnet": {
+            "type": "string",
+             
+            "metadata": {
+                "description": "The name of the vnet"
+            }
+        },
+        "subnet": {
+            "type": "string",
+            
+            "metadata": {
+                "description": "The name of the subnet"
+            }
+        },
+        "storageaccountname": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        }
+         
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('vnet')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+             
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnet')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage"
+                                }
+                            ]
+                        }
+                    }
+                     
+                
+                ]
+            }
+        },
+        {
+            "name": "[parameters('storageaccountname')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks',parameters('vnet'))]"
+            ],
+            "apiVersion": "2021-04-01",
+             
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "networkAcls": {
+                   "virtualNetworkRules": [
+                    {
+                        "action": "Allow",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vnet'),parameters('subnet'))]"
+                    }
+                   ]
+                },
+                "defaultAction": "Deny"
+            }
+            
+        }
+       
+    ],
+    "outputs": {}
+}

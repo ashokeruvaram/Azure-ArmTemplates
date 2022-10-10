@@ -1,0 +1,134 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sqlserverName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the SQL server"
+            }
+        },
+        "sqldbName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the SQL DB"
+            }
+        },
+        "aspName": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "webAppName": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "sqluserName": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "sqladminpassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "description"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('sqlserverName')]",
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2014-04-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[parameters('sqlserverName')]"
+            },
+            "properties": {
+                "administratorLogin": "[parameters('sqluserName')]",
+                "administratorLoginPassword": "[parameters('sqladminpassword')]"
+            },
+            "resources": [
+                {
+                    "type": "firewallRules",
+                    "apiVersion": "2014-04-01",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Sql/servers', parameters('sqlserverName'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "name": "AllowAllWindowsAzureIps",
+                    "properties": {
+                        "startIpAddress": "0.0.0.0",
+                        "endIpAddress": "0.0.0.0"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[concat(parameters('sqlserverName'),'/',parameters('sqldbName'))]",
+            "type": "Microsoft.Sql/servers/databases",
+            "apiVersion": "2014-04-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "sqlDatabase1"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers',parameters('sqlserverName'))]"
+            ],
+            "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "edition": "Basic",
+                "maxSizeBytes": "1073741824",
+                "requestedServiceObjectiveName": "Basic"
+            }
+        },
+        {
+            "name": "[parameters('aspName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2020-12-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers',parameters('sqlserverName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "F1",
+                "capacity": 1
+            },
+            "tags": {
+                "displayName": "[parameters('aspName')]"
+            },
+            "properties": {
+                "name": "[parameters('aspName')]"
+            }
+        },
+        {
+            "name": "[parameters('webAppName')]",
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2020-12-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+              "[resourceId('Microsoft.Web/serverfarms',parameters('aspName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('webAppName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms',parameters('aspName'))]",
+                "siteConfig": {
+                    "connectionStrings": [
+                        {
+                            "connectionString":"[concat('Server=tcp:',parameters('sqlserverName'),'.database.windows.net',',1433',';','Initial Catalog=',parameters('sqldbName'),';','Persist Security Info=False;','User ID=',parameters('sqluserName'),';','Password=',parameters('sqladminpassword'),';','MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]",
+                            "name": "SqlConnection",
+                            "type": "SQLAzure"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}

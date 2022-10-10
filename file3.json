@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageaccountname": {
+            "type": "array",
+            "defaultValue": [
+                "ashokstoragearm4110",
+                "ashokstoragearm4111",
+                "ashokstoragearm4112"
+            ],
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "location": {
+            "type": "array",
+            "defaultValue": [
+                "East US",
+                "East US2",
+                "Central US"
+            ],
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "skuName": {
+            "type": "array",
+            "defaultValue": [
+                "Standard_LRS",
+                "Standrad_ZRS",
+                "Standrad_GRS"
+
+            ],
+            "metadata": {
+                "description": "description"
+            }
+        }
+
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('storageaccountname')[copyIndex()]]",
+            "copy": {
+                "name": "storagecopy",
+                "count":"[length(parameters('storageaccountname'))]"
+            },
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "tags": {
+                "displayName": "storageaccount1"
+            },
+            "location": "[parameters('location')[copyIndex()]]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "[parameters('skuName')[copyIndex()]]",
+                "tier": "Standard"
+            }
+        }
+    ],
+    "outputs": {}
+}

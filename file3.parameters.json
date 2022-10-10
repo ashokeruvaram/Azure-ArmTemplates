@@ -1,0 +1,28 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageaccountname": {
+            "value": [
+                "storageaccountfirst000",
+                "storageaccountfirst000",
+                "storageaccount000"
+            ]
+        },
+        "location": {
+            "value": [
+                "East US",
+                "East US2",
+                "Central US"
+            ]
+        },
+        "skuName": {
+            "value": [
+                            "Standard_LRS",
+                            "Standrad_ZRS",
+                            "Standrad_GRS"
+            
+                        ]
+        }
+    }
+}
