@@ -1,0 +1,191 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "uniquednsnamepip": {
+            "type": "string",
+            "metadata": {
+                "description": "Relative DNS Name for the Public IPs used to access the Virtual Machines, must be globally unique. An index will be appended for each instance."
+            }
+        },
+        "vmusername": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "vmpassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "description"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "noVMs": 2,
+        "imageReference": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "18.04-LTS",
+        "version": "latest"
+        },
+        "VMname":"ubuntuvm",
+        "virtualNetworkName": "[format('{0}-vnet', variables('vmName'))]",
+        "networkSecurityGroupName": "[format('{0}-nsg', variables('vmName'))]",
+        "addressPrefix": "10.0.0.0/16",
+        "subnetPrefix": "10.0.0.0/24",
+        "subnetName": "Subnet"
+
+    },
+    "resources": [
+        
+        {
+            "name": "[format('{0}{1}-pip',variables('VMname'),range(0,variables('noVMs'))[copyIndex()])]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+           
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[format('{0}{1}',parameters('uniquednsnamepip'),range(0,variables('noVMs'))[copyIndex()])]"
+                }
+            },
+            "copy": {
+                "name": "ip",
+                "count": "[length(range(0, variables('noVMs')))]"
+            }
+        },
+        {
+            "name": "[variables('networkSecurityGroupName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "nsgRule1",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('virtualNetworkName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+            ],
+            
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": "[variables('addressPrefix')]"
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[format('{0}{1}-nic', variables('VMname'), range(0, variables('noVMs'))[copyIndex()])]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}{1}-pip',variables('VMname'),range(0,variables('noVMs'))[range(0,variables('noVMs'))[copyIndex()]]))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+            ],
+            
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipConfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{}0{1}-Pip',variables('VMname'),range(0,variables('noVMs'))[range(0,variables('noVMs'))][copyIndex()]))]"
+                            },
+                            "subnet": {
+                                "id": "[reference(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))).subnets[0].id]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "copy": {
+                "name":"nic",
+                "count": "[length(range(0,variables('noVMs')))]"
+            }
+        },
+        {
+            "name": "[format('{0}{1}',variables('VMname'),range(0,variables('noVMs'))[copyIndex()])]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-03-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic',variables('VMname'),range(0,variables('noVMs'))[range(0,variables('noVMs'))[copyIndex()]]))]"
+            ],
+            
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_A2_v2"
+                },
+                "osProfile": {
+                    "computerName": "[format('{0}{1}', variables('VMname'), range(0, variables('noVMs'))[copyIndex()])]",
+                    "adminUsername": "[parameters('vmusername')]",
+                    "adminPassword": "[parameters('vmpassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('imageReference')]",
+                         
+                    
+                    "osDisk": {
+                        "name": "[format('{}{}-osdisk',variables('VMname'),range(0,variables('noVMs'))[copyIndex()])]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic'),variables('VMname'),range(0,variables('noVMs'))[range(0,variables('noVMs'))[copyIndex()]])]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": false
+                         
+                    }
+                }
+            },
+            "copy": {
+                "name": "vm",
+                "count": "[length(range(0,variables('noVMs')))]"
+            }
+
+        }
+    ],
+    "outputs": {}
+}
